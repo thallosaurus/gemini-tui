@@ -1,44 +1,67 @@
-use tui::{backend::Backend, Frame, widgets::{Paragraph, Block, Borders}, text::Text, layout::{Direction, Constraint, Layout}};
+use std::io::stdout;
 
-use crate::app::{App, States};
+use crossterm::{cursor::MoveTo, execute};
+use tui::{
+    backend::Backend,
+    layout::{Constraint, Direction, Layout, Rect},
+    text::Text,
+    widgets::{Block, Borders, Paragraph, Widget},
+    Frame,
+};
 
-pub fn draw<B: Backend>(f: &mut Frame<B>, app: App) {
+use crate::{app::{App, States}, menus::Submenu};
+
+pub fn draw<B: Backend>(f: &mut Frame<B>, app: &App) {
     let chunks = Layout::default()
-    .direction(Direction::Vertical)
-    .margin(0)
-    .constraints(
-        [
-            Constraint::Percentage(90),
-            Constraint::Percentage(10)
-            ].as_ref()
-    ).split(f.size());
+        .direction(Direction::Vertical)
+        .margin(0)
+        .constraints([Constraint::Percentage(90), Constraint::Percentage(10)].as_ref())
+        .split(f.size());
 
-    let block = Block::default()
-        .title("Title")
-        .borders(Borders::all());
+        let data: (Paragraph, Paragraph);
 
-    //let text = Text::from(app.hello_world_string);
+        draw_widget(f, app.get_main(app, f.size()), chunks[0]);
+        draw_widget(f, app.get_help_string(), chunks[1]);
 
-    let text_string = format!("Current Mode: {}", app.mode.to_string());
-    let text = Text::from(text_string);
+        match app.submenu.clone() {
+            None => {
+                // data = (app.get_main(app, chunks[0]), app.get_help_string());
 
-    let browser_window = Paragraph::new(text)
-        .block(block);
+            },
+            Some(mut menu) => {
+                let menu_main = menu.get_main(app, chunks[0]);
+                draw_widget(f, menu_main.0, menu_main.1);
+                draw_widget(f, menu.get_help_string(), chunks[1]);
+            },
+        }
 
-    f.render_widget(browser_window, chunks[0]);
 
-    let prompt_prefix = match app.mode {
+        // draw_widget(f, data.1, f.size());
+}
+
+fn draw_widget<B: Backend>(f: &mut Frame<B>, w: Paragraph, area: Rect) {
+    f.render_widget(w, area);
+}
+
+/* fn draw_browser<B: Backend>(f: &mut Frame<B>, w: Paragraph, area: Rect) {
+
+
+    f.render_widget(w, area);
+} */
+
+fn draw_help<B: Backend>(f: &mut Frame<B>, app: &App, area: Rect) {
+
+/*     let help_prefix = match app.mode {
         States::BrowsingMode => String::from("B"),
-        States::CommandMode => String::from(">"),
+        // States::CommandMode => String::from(">"),
         States::SubmenuMode => String::from("S"),
-    };
+    }; */
 
-    let prompt = format!("{} ", prompt_prefix);
+/*     let help = format!("[q] Quit, [o] Open");
 
-    let prompt_text = Text::from(prompt);
+    let help_text = Text::from(help);
 
-    let prompt_pg = Paragraph::new(prompt_text)
-        .block(Block::default());
+    let help_pg = Paragraph::new(help_text).block(Block::default()); */
 
-    f.render_widget(prompt_pg, chunks[1])
+    // f.render_widget(help_pg, area);
 }

@@ -103,6 +103,8 @@ dependencies = [
  "crossterm",
  "gemini",
  "tui",
+ "unicode-segmentation",
+ "unicode-width",
 ]
 
 [[package]]

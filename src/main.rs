@@ -1,12 +1,15 @@
 //mod app;
 mod ui;
 mod app;
-mod cli;
+pub mod menus;
+// mod cli;
 
 use core::time;
-use std::{io, time::{Duration, SystemTime, Instant}, thread};
+use std::{io, time::{Duration, SystemTime, Instant}, thread, rc::Rc};
 use app::{App, States};
+// use cli::{draw_cli};
 use crossterm::{terminal::{enable_raw_mode, EnterAlternateScreen, disable_raw_mode, LeaveAlternateScreen}, execute, event::{EnableMouseCapture, DisableMouseCapture, Event, self, KeyCode}};
+use menus::Submenu;
 use tui::{backend::CrosstermBackend, Terminal, widgets::{Block, Borders}, text::Text};
 use ui::draw;
 
@@ -29,7 +32,7 @@ fn main() -> Result<(), io::Error>{
 
     loop {
         terminal.draw(|f| {
-            draw(f, app.clone());
+            draw(f, &app.clone());
         })?;
 
         let timeout = tick_rate
@@ -38,33 +41,12 @@ fn main() -> Result<(), io::Error>{
 
         if crossterm::event::poll(timeout)? {
             if let Event::Key(key) = event::read()? {
-                
-                if let KeyCode::Char(c) = key.code {
-                    if c == 'q' && app.mode == States::BrowsingMode {
-                        break
-                    }
-                }
                 app.on_event(key);
-                /*match key.code {
-                    KeyCode::Char(c) => {
-                        match c {
-                            'q' => break,
-                            _ => app.on_key(&c)
-                        }
-//                            app.on_key(&c);
-                    },
-                    KeyCode::Esc => {
-                        //toggle command mode or view mode
-                        app.toggle_state()
-                    },
-                    KeyCode::Enter => {
-
-                        //pass currently hovered object
-                        app.enter()
-                    }
-                    _ => {}
-                }*/
             }
+        }
+
+        if app.should_quit {
+            break
         }
 
         if last_tick.elapsed() >= tick_rate {
