@@ -1,48 +1,63 @@
 use std::{
     io::{stdout, Error, Stdout},
-    rc::Rc,
+    process::Stdio,
+    rc::Rc, ops::Add,
 };
+
+use crossterm::terminal::ClearType::All;
 
 use crossterm::{
     cursor::{Hide, MoveTo, Show},
     event::{KeyCode, KeyEvent},
     execute,
+    terminal::Clear,
 };
 use gemini::{request::Any, response, AnyRequest, Request, Url};
 use tui::{
     backend::{Backend, CrosstermBackend},
-    layout::Rect,
+    layout::{Layout, Rect},
+    style::{Color, Style},
     text::Text,
     widgets::{Block, Borders, Paragraph},
     Frame, Terminal,
 };
 
-use crate::menus::{url::UrlInputMenu, Submenu, SubmenuStatus};
+use crate::{menus::{url::UrlInputMenu, Submenu, SubmenuStatus}, gemini::GeminiError};
 
 impl App {
     pub fn new() -> App {
-        let current_url = match Url::parse("gemini://") {
+        let current_url = match Url::parse("gemini://gemini.circumlunar.space") {
             Ok(u) => u,
             Err(e) => panic!("{}", e),
         };
 
         // let hello_world_string = String::from("Hello World");
 
+        let text = String::from("20 text/gemini\r\n # Hello World\n\n");
         App {
             current_url,
             should_quit: false,
+            display_text: Some(text.clone()),
             // hello_world_string,
             // mode: States::BrowsingMode,
-            submenu: None, // submenus: SubmenuManager::new()
+            submenu: None,
+
+            //Length presents Height, Each Element represents the length of each paragraph
+            //viewport: vec![text.clone().len()], // submenus: SubmenuManager::new()
+            width: text.clone().len(),
+            height: 10,
+            x: 0,
+            y: 0,
         }
+    }
+
+    pub fn clear_screen(&mut self) {
+        //execute!(stdout(), Clear(All));
+        //execute!(Stdout(), Clear);
     }
 
     fn set_browsing_mode(&mut self) {
         self.submenu = None;
-    }
-
-    pub fn enter(&mut self) {
-        //do nothing for now
     }
 
     fn has_submenu(&self) -> bool {
@@ -56,14 +71,10 @@ impl App {
             // Some(mut menu) => {
             if let Some(mut menu) = menu_copy {
                 match menu.on_event(event, self) {
-                    SubmenuStatus::Open => {
-                        // menu.follow_up(self);
-                        self.submenu = Some(menu)
-                    }
+                    SubmenuStatus::Open => self.submenu = Some(menu),
                     // (SubmenuStatus::Close, Some(res)) => self.submenu = None,
                     SubmenuStatus::Close => self.submenu = None,
                 }
-
             }
         } else {
             match event.code {
@@ -79,6 +90,17 @@ impl App {
                             self.should_quit = true;
                         }
                         _ => {}
+                    }
+                }
+                KeyCode::Up => {
+                    //scroll up
+                    if self.y as usize > self.height {
+                        self.y -= 1;
+                    }
+                }
+                KeyCode::Down => {
+                    if self.y as usize > 0
+                        self.y += 1;
                     }
                 }
                 _ => {}
@@ -97,31 +119,65 @@ impl App {
         help_pg
     }
 
-    pub fn get_main(&self, app: &App, area: Rect) -> tui::widgets::Paragraph {
-        // todo!()
+    pub fn get_main(&mut self, app: &mut App, area: Rect) -> tui::widgets::Paragraph {
+        let style = Style::default().fg(Color::White).bg(Color::Black);
 
-        let block = Block::default().title("Title").borders(Borders::all());
+        let masterblock = Block::default()
+            .style(style)
+            .title("Title")
+            .borders(Borders::all());
+            //mastertext.body_text().
+        //let mut mastertext = Vec::new();
 
-        //let text = Text::from(app.hello_world_string);
+        /*for line in text_split.iter().enumerate() {
+            if line.0 >= self.y.into() {
+                mastertext.push(*line.1);
+            }
+        }*/
 
-        let text_string = "Hello from trait-world!";
-        let text = Text::from(text_string);
+        /*let filtered: Vec<&str> = text_split.iter().enumerate().filter(|f| {
+            return f.0 > height_offset.into() && f.0 < height_offset_end.into();
+        }).map(|f| return *f.1).collect();*/
 
-        let browser_window = Paragraph::new(text).block(block);
+        //let built = filtered.join("\n");
+
+        //let built = format!("{}", cop);
+
+        let empty = String::from("");
+        let built = self.display_text.as_ref().unwrap_or(&empty);
+
+        let collected: Vec<&str> = self.display_text.as_ref().unwrap().lines().skip(self.y.into()).collect();
+
+        let text = Text::from(String::from(format!("{:?}", collected)));
+
+        let browser_window = Paragraph::new(text).style(style).block(masterblock);
 
         browser_window
     }
 
-}
+    pub fn update_page(&mut self, content: String) {
+        //Length presents Height, Each Element represents the length of each paragraph
 
-// impl Submenu for App {
+        let c = content;
+
+        self.width = calculate_page_width(&c);
+        self.height = calculate_page_height(&c);
+        self.display_text = Some(c);
+    }
+}
 
 #[derive(Clone)]
 pub struct App {
-    current_url: Url,
+    pub current_url: Url,
     // pub mode: States,
     pub submenu: Option<Box<dyn Submenu>>,
     pub should_quit: bool,
+    pub display_text: Option<String>,
+    //pub viewport: Vec<usize>
+    pub width: usize,
+    pub height: usize,
+    x: u16,
+    y: u16,
 }
 
 #[derive(Copy, Clone, PartialEq)]
@@ -138,4 +194,27 @@ impl ToString for States {
             States::SubmenuMode => String::from("Submenu Mode"),
         }
     }
+}
+
+fn calculate_page_width(data: &String) -> usize {
+    let vport = data
+        .split("\r\n")
+        .into_iter()
+        .map(|f| return f.len())
+        .max()
+        .unwrap_or(0);
+
+    vport
+
+    //Length presents Height, Each Element represents the length of each paragraph
+}
+
+fn calculate_page_height(data: &String) -> usize {
+    let vport: Vec<usize> = data
+        .split("\r\n")
+        .into_iter()
+        .map(|f| return f.len())
+        .collect();
+
+    vport.len()
 }

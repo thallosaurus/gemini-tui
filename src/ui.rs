@@ -11,16 +11,18 @@ use tui::{
 
 use crate::{app::{App, States}, menus::Submenu};
 
-pub fn draw<B: Backend>(f: &mut Frame<B>, app: &App) {
+pub fn draw<B: Backend>(f: &mut Frame<B>, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(0)
         .constraints([Constraint::Percentage(90), Constraint::Percentage(10)].as_ref())
         .split(f.size());
 
-        let data: (Paragraph, Paragraph);
+        //let data: (Paragraph, Paragraph);
 
-        draw_widget(f, app.get_main(app, f.size()), chunks[0]);
+        let mut app_copy = app.clone();
+
+        draw_widget(f, app.get_main(&mut app_copy, f.size()), chunks[0]);
         draw_widget(f, app.get_help_string(), chunks[1]);
 
         match app.submenu.clone() {

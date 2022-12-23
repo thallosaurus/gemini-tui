@@ -2,6 +2,7 @@
 mod ui;
 mod app;
 pub mod menus;
+mod gemini;
 // mod cli;
 
 use core::time;
@@ -18,7 +19,7 @@ fn main() -> Result<(), io::Error>{
     //setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    execute!(stdout, EnterAlternateScreen)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
@@ -32,7 +33,7 @@ fn main() -> Result<(), io::Error>{
 
     loop {
         terminal.draw(|f| {
-            draw(f, &app.clone());
+            draw(f, &mut app);
         })?;
 
         let timeout = tick_rate
@@ -58,7 +59,7 @@ fn main() -> Result<(), io::Error>{
     execute!(
         terminal.backend_mut(),
         LeaveAlternateScreen,
-        DisableMouseCapture
+        //DisableMouseCapture
     )?;
     terminal.show_cursor()?;
 

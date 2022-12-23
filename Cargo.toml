@@ -11,3 +11,6 @@ crossterm = "0.25"
 gemini = "0.0.5"
 unicode-width = "0.1"
 unicode-segmentation = "1.2"
+rustls = { version = "0.18", features=["dangerous_configuration"]}
+webpki = "0.21"
+webpki-roots = "0.20"
