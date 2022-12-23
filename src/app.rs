@@ -94,12 +94,12 @@ impl App {
                 }
                 KeyCode::Up => {
                     //scroll up
-                    if self.y as usize > self.height {
+                    if self.y as usize > 0 {
                         self.y -= 1;
                     }
                 }
                 KeyCode::Down => {
-                    if self.y as usize > 0
+                    if (self.y + self.height as u16) < self.get_text_height() {
                         self.y += 1;
                     }
                 }
@@ -108,6 +108,16 @@ impl App {
         }
         // Ok(())
         // SubmenuStatus::Open
+    }
+
+    fn get_text_height(&self) -> u16 {
+        match self.display_text.clone() {
+            Some(t) => {
+                let line_collection: Vec<&str> = t.lines().collect();
+                return line_collection.len() as u16;
+            }
+            None => return 0,
+        }
     }
 
     pub fn get_help_string(&self) -> Paragraph {
@@ -144,11 +154,11 @@ impl App {
         //let built = format!("{}", cop);
 
         let empty = String::from("");
-        let built = self.display_text.as_ref().unwrap_or(&empty);
+        // let built = self.display_text.as_ref().unwrap_or(&empty);
 
         let collected: Vec<&str> = self.display_text.as_ref().unwrap().lines().skip(self.y.into()).collect();
 
-        let text = Text::from(String::from(format!("{:?}", collected)));
+        let text = Text::from(String::from(format!("{}", collected.join("\n\r"))));
 
         let browser_window = Paragraph::new(text).style(style).block(masterblock);
 

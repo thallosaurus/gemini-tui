@@ -3,7 +3,7 @@ use std::{
     net::TcpStream,
     result,
     sync::Arc,
-    thread,
+    thread, str::Bytes,
 };
 
 use std::sync::mpsc::channel;
@@ -41,9 +41,12 @@ pub struct GeminiError {
 
 pub fn gemini_request(url: Url) -> Result<gemini::Response, GeminiError>{
     let host = url.host().unwrap();
-    let destination = format!("{}:1965", &  host);
+    let destination = format!("{}:443", &  host);
     let dns_request = host;
-    let request = format!("gemini://{}/\r\n", &dns_request.to_string());
+    
+    let req_enum = RequestType::from(url.clone());
+    let request = req_enum.from_enum(url.clone());
+    // let request = format!("https://{}/\r\n", &dns_request.to_string());
 
     //println!("Attempting to visit....{}", destination);
 
@@ -129,4 +132,34 @@ fn send(request: String, mut client: ClientSession, mut socket: TcpStream) -> Re
     let content = String::from_utf8_lossy(&data);
 
     Ok(content.to_string())*/
+}
+
+enum RequestType {
+    Gemini,
+    Https
+}
+
+impl RequestType {
+    pub fn from_enum(&self, url: Url) -> String {
+        match self {
+            RequestType::Gemini => {
+                let f = format!("gemini://{}{}:1965\r\n", url.host().unwrap(), url.path());
+                return f
+            },
+            RequestType::Https => {
+                let f = format!("GET {} HTTP/1.1\r\nHost: {}:443", url.path(), url.host().unwrap());
+                return f
+            }
+        }
+    }
+}
+
+impl From<Url> for RequestType {
+    fn from(value: Url) -> Self {
+        match value.scheme() {
+            "http*" =>  RequestType::Https,
+            "gemini" => RequestType::Gemini,
+            _ => RequestType::Gemini,
+        }
+    }
 }

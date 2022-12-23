@@ -79,6 +79,7 @@ impl Submenu for UrlInputMenu {
                 };
                 
                 //let data = self.connection.request(url);
+                
                 match gemini_request(url) {
                     Ok(data) => {
                         let as_text = data.body_text().unwrap();
