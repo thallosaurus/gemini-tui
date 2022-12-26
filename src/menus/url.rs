@@ -138,7 +138,7 @@ impl Submenu for UrlInputMenu {
 
                 //let data = self.connection.request(url);
 
-                self.make_request(url, app);
+                self.make_request(&url, app);
 
                 SubmenuStatus::Close
             }
