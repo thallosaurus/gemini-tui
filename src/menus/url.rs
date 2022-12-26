@@ -6,15 +6,16 @@ use crossterm::{
     execute,
     terminal::disable_raw_mode,
 };
-use gemini::{Url, request::Gemini};
+use gemini::{request::Gemini, Url};
 use tui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
+    style::{Color, Style},
     text::Text,
-    widgets::{Block, Borders, Paragraph, Widget}, style::{Color, Style},
+    widgets::{Block, Borders, Paragraph, Widget},
 };
 
-use crate::{app::App, gemini::{gemini_request}};
+use crate::{app::App, gemini::gemini_request};
 
 use super::{Loader, Submenu, SubmenuStatus};
 
@@ -27,6 +28,7 @@ pub struct UrlInputMenu {
     cursor_pos: (u16, u16),
     has_loaded: bool,
     own_area: Rect,
+    redirect_counter: u8
     //connection: Connection
 }
 
@@ -39,9 +41,62 @@ impl UrlInputMenu {
         }
 
         //if self.cursor_pos != pos {
-            execute!(stdout(), MoveTo(pos.0, pos.1));
-            self.cursor_pos = pos;
+        execute!(stdout(), MoveTo(pos.0, pos.1));
+        self.cursor_pos = pos;
         //}
+    }
+
+    fn make_request(&mut self, url: &Url, app: &mut App) {
+        let req = gemini_request(url);
+        match req {
+            Ok(data) => match data.header.status.code() {
+                gemini::Code::Input => todo!(),
+                gemini::Code::SensitiveInput => todo!(),
+                gemini::Code::Success => {
+                    let as_text = match data.body_text() {
+                        Some(body) => body,
+                        None => "Error: Empty response".as_ref(),
+                    };
+                    app.update_page(as_text.to_string());
+                }
+                gemini::Code::TemporaryRedirect | gemini::Code::PermanentRedirect => {
+                    if self.redirect_counter != 10 {
+                        self.redirect_counter += 1;
+
+
+
+                        match Url::parse(data.header.meta()) {
+                            Ok(url_new) => {
+                                let data_redir = self.make_request(&url_new, app);
+                            },
+                            Err(e) => {
+                                //Invalid URL
+                            }
+                        }
+                    } else {
+                        app.update_page(String::from("Maximum Redirect Limit reached"));
+                    }
+
+
+                },
+                gemini::Code::TemporaryFailure => todo!(),
+                gemini::Code::ServerUnavailable => todo!(),
+                gemini::Code::CGIError => todo!(),
+                gemini::Code::ProxyError => todo!(),
+                gemini::Code::SlowDown => todo!(),
+                gemini::Code::PermanentFailure => todo!(),
+                gemini::Code::NotFound => todo!(),
+                gemini::Code::Gone => todo!(),
+                gemini::Code::ProxyRequestRefused => todo!(),
+                gemini::Code::BadRequest => todo!(),
+                gemini::Code::ClientCertificateRequired => todo!(),
+                gemini::Code::ClientCertificateNotAuthorised => todo!(),
+                gemini::Code::CertificateNotValid => todo!(),
+            },
+            Err(err) => app.update_page(err.error_message),
+            //app.update_page(format!("{:?}", req.unwrap()));
+            //app.update_page(format!("{}", as));
+        }
     }
 }
 
@@ -53,6 +108,7 @@ impl Default for UrlInputMenu {
             cursor_pos: (0, 0),
             has_loaded: false,
             own_area: Rect::new(0, 0, 0, 0),
+            redirect_counter: 0
             //connection: conn
         }
     }
@@ -77,16 +133,12 @@ impl Submenu for UrlInputMenu {
                     Ok(u) => u,
                     Err(e) => panic!("{}", e),
                 };
-                
+
+                //let req = gemini_request(url);
+
                 //let data = self.connection.request(url);
-                
-                match gemini_request(url) {
-                    Ok(data) => {
-                        let as_text = data.body_text().unwrap();
-                        app.update_page(as_text.to_string());
-                    }
-                    Err(err) => app.update_page(err.error_message),
-                }
+
+                self.make_request(url, app);
 
                 SubmenuStatus::Close
             }
@@ -132,21 +184,33 @@ impl Submenu for UrlInputMenu {
             )
             .split(area);
 
-        self.own_area = chunks[1];
+        let chunks_vert = Layout::default()
+            .direction(Direction::Vertical)
+            .margin(0)
+            .constraints(
+                [
+                    Constraint::Percentage(30),
+                    Constraint::Percentage(40),
+                    Constraint::Percentage(30),
+                ]
+                .as_ref(),
+            )
+            .split(chunks[1]);
 
-        let style = Style::default()
-            .fg(Color::White)
-            .bg(Color::Black);
+        let style = Style::default().fg(Color::White).bg(Color::Black);
 
         let block = Block::default()
-        //.style(style)
-        .borders(Borders::all());
+            //.style(style)
+            .borders(Borders::all());
 
         let prompted = format!("{}_", self.current_url_input.clone());
 
-        let paragraph = Paragraph::new(Text::from(prompted)).style(style).block(block);
+        let paragraph = Paragraph::new(Text::from(prompted))
+            .style(style)
+            .block(block);
+        self.own_area = chunks_vert[1];
 
-        (paragraph, chunks[1])
+        (paragraph, chunks_vert[1])
     }
 
     fn menuId(&self) -> u8 {

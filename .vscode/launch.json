@@ -7,10 +7,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug",
-            "program": "${workspaceFolder}/<executable file>",
+            "name": "Cargo launch",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin",
+                    "gemini-tui"
+                ]
+            },
             "args": [],
-            "cwd": "${workspaceFolder}"
+            "terminal": "external"
         }
     ]
 }

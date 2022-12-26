@@ -22,7 +22,7 @@ use tui::{
     Frame, Terminal,
 };
 
-use crate::{menus::{url::UrlInputMenu, Submenu, SubmenuStatus}, gemini::GeminiError};
+use crate::{menus::{url::UrlInputMenu, Submenu, SubmenuStatus, debug::DebugWindow}, gemini::GeminiError};
 
 impl App {
     pub fn new() -> App {
@@ -85,6 +85,9 @@ impl App {
                             //open new gemsite
                             // self.enter_submenu();
                             self.submenu = Some(Box::new(UrlInputMenu::default()))
+                        },
+                        'd' => {
+                            self.submenu = Some(Box::new(DebugWindow::default()))
                         }
                         'q' => {
                             self.should_quit = true;
@@ -174,6 +177,34 @@ impl App {
         self.height = calculate_page_height(&c);
         self.display_text = Some(c);
     }
+
+    /*fn lines(&self) {
+        match self.display_text {
+            None => {
+                vec![]
+            },
+            Some(text) => {
+                let line_links = text.lines().filter(|f|{
+                    f.starts_with("=>")
+                })
+                .map(|line| {
+                    GeminiLink::from
+                })
+                .collect()
+            }
+        }
+    }*/
+}
+
+struct GeminiLink {
+    href: String,
+    label: String
+}
+
+impl From<String> for GeminiLink {
+    fn from(line: String) -> Self {
+        GeminiLink { href: String::from("") , label: String::from("") }
+    }
 }
 
 #[derive(Clone)]
@@ -227,4 +258,16 @@ fn calculate_page_height(data: &String) -> usize {
         .collect();
 
     vport.len()
+}
+
+#[cfg(test)]
+mod tests {
+    use gemini::Url;
+
+    #[test]
+    pub fn url_and_gemini_paths() {
+        let url = Url::parse("news/Official").unwrap();
+        println!("{:?}", url);
+        assert_ne!("/", url.path());
+    }
 }

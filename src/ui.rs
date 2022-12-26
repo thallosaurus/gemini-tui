@@ -15,7 +15,7 @@ pub fn draw<B: Backend>(f: &mut Frame<B>, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(0)
-        .constraints([Constraint::Percentage(90), Constraint::Percentage(10)].as_ref())
+        .constraints([Constraint::Percentage(99), Constraint::Percentage(1)].as_ref())
         .split(f.size());
 
         //let data: (Paragraph, Paragraph);
@@ -44,12 +44,6 @@ pub fn draw<B: Backend>(f: &mut Frame<B>, app: &mut App) {
 fn draw_widget<B: Backend>(f: &mut Frame<B>, w: Paragraph, area: Rect) {
     f.render_widget(w, area);
 }
-
-/* fn draw_browser<B: Backend>(f: &mut Frame<B>, w: Paragraph, area: Rect) {
-
-
-    f.render_widget(w, area);
-} */
 
 fn draw_help<B: Backend>(f: &mut Frame<B>, app: &App, area: Rect) {
 

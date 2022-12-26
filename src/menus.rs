@@ -1,5 +1,6 @@
 // mod menus;
 pub mod url;
+pub mod debug;
 
 use std::io::{Error, stdout};
 
